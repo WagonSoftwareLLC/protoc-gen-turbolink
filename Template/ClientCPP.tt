@@ -28,6 +28,26 @@ FGrpcContextHandle U<#=service.Name#>Client::Init<#=method.Name#>()
 	return context->GetHandle();
 }
 
+<#if (method.ClientStreaming){#>
+FGrpcContextHandle U<#=service.Name#>Client::Create<#=method.Name#>()
+{
+	FGrpcContextHandle handle = Service->TurboLinkManager->GetNextContextHandle();
+	auto context = UGrpcClient::MakeContext<GrpcContext_<#=service.Name#>_<#=method.Name#>>(handle);
+	context->RpcContext = UTurboLinkGrpcManager::Private::CreateRpcClientContext();
+	return context->GetHandle();
+}
+
+void U<#=service.Name#>Client::Init<#=method.Name#>FromHandle(FGrpcContextHandle Handle)
+{
+	auto context = UGrpcClient::GetContext(Handle);
+	if (context != nullptr)
+	{
+		auto context<#=method.Name#> = StaticCastSharedPtr<GrpcContext_<#=service.Name#>_<#=method.Name#>>(*context);
+		context<#=method.Name#>->Init();
+	}
+}
+<#}#>
+
 void U<#=service.Name#>Client::<#=method.Name#>(FGrpcContextHandle Handle, const <#=method.InputType#>& Request)
 {
 	auto context = UGrpcClient::GetContext(Handle);
