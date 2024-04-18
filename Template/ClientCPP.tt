@@ -17,14 +17,12 @@ foreach(GrpcService service in s.ServiceArray)
 foreach (GrpcServiceMethod method in service.MethodArray)
 {
 #>
-
 <#if (method.ClientStreaming){#>
 FGrpcContextHandle U<#= service.Name #>Client::Create<#= method.Name #>()
 <#}else{#>
 FGrpcContextHandle U<#= service.Name #>Client::Init<#= method.Name #>()
 <#}#>
 {
-
 	FGrpcContextHandle handle = Service->TurboLinkManager->GetNextContextHandle();
 	auto context = UGrpcClient::MakeContext<GrpcContext_<#=service.Name#>_<#=method.Name#>>(handle);
 	context->RpcContext = UTurboLinkGrpcManager::Private::CreateRpcClientContext();

@@ -56,12 +56,14 @@ public:
 foreach (GrpcServiceMethod method in service.MethodArray)
 {
 #>
-	UFUNCTION(BlueprintCallable, Category = TurboLink)
-
 <#if (method.ClientStreaming){#>
+	UFUNCTION(BlueprintCallable, Category = TurboLink)
 	FGrpcContextHandle Create<#=method.Name#>();
+
+	UFUNCTION(BlueprintCallable, Category = TurboLink)
 	void Init<#=method.Name#>FromHandle(FGrpcContextHandle Handle);
 <#}else{#>
+	UFUNCTION(BlueprintCallable, Category = TurboLink)
 	FGrpcContextHandle Init<#=method.Name#>();
 <#}#>
 
