@@ -23,9 +23,16 @@ foreach (GrpcServiceMethod method in service.MethodArray)
 {
 #>
 <#if(method.ClientStreaming) {#>
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOn<#=service.Name#><#=method.Name#>WriteComplete, FGrpcContextHandle, Handle);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOn<#=service.Name#><#=method.Name#>WriteComplete, const FGrpcContextHandle&, Handle);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOn<#=service.Name#><#=method.Name#>WriteCompleteNative, const FGrpcContextHandle&/*, Handle*/);
 <#}#>
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOn<#=service.Name#><#=method.Name#>Response, FGrpcContextHandle, Handle, const FGrpcResult&, GrpcResult, const <#=method.OutputType#>&, Response);
+<#if(method.ServerStreaming) {#>
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOn<#=service.Name#><#=method.Name#>Response, const FGrpcContextHandle&, Handle, const FGrpcResult&, GrpcResult, bool, bIsEnded, const <#=method.OutputType#>&, Response);
+DECLARE_MULTICAST_DELEGATE_FourParams(FOn<#=service.Name#><#=method.Name#>ResponseNative, const FGrpcContextHandle&/*, Handle*/, const FGrpcResult&/*, GrpcResult*/, const bool&/*, bIsEnded*/, const <#=method.OutputType#>&/*, Response*/);
+<#} else {#>
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOn<#=service.Name#><#=method.Name#>Response, const FGrpcContextHandle&, Handle, const FGrpcResult&, GrpcResult, const <#=method.OutputType#>&, Response);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FOn<#=service.Name#><#=method.Name#>ResponseNative, const FGrpcContextHandle&/*, Handle*/, const FGrpcResult&/*, GrpcResult*/, const <#=method.OutputType#>&/*, Response*/);
+<#}#>
 <#
 }
 #>
@@ -43,10 +50,12 @@ foreach (GrpcServiceMethod method in service.MethodArray)
 <#if(method.ClientStreaming) {#>
 	UPROPERTY(BlueprintAssignable)
 	FOn<#=service.Name#><#=method.Name#>WriteComplete On<#=method.Name#>WriteComplete;
+	FOn<#=service.Name#><#=method.Name#>WriteCompleteNative On<#=method.Name#>WriteCompleteNative;
 
 <#}#>
 	UPROPERTY(BlueprintAssignable)
 	FOn<#=service.Name#><#=method.Name#>Response On<#=method.Name#>Response;
+	FOn<#=service.Name#><#=method.Name#>ResponseNative On<#=method.Name#>ResponseNative;
 
 <#
 }
@@ -57,25 +66,25 @@ foreach (GrpcServiceMethod method in service.MethodArray)
 {
 #>
 	UFUNCTION(BlueprintCallable, Category = TurboLink)
-	FGrpcContextHandle Init<#=method.Name#>();
+	FGrpcContextHandle& Init<#=method.Name#>();
 
 <#if (method.ClientStreaming){#>
 	//Use Create -> InitFromHandle instead of Init if you want to add metadata to a stream
 	UFUNCTION(BlueprintCallable, Category = TurboLink)
-	FGrpcContextHandle Create<#=method.Name#>();
+	FGrpcContextHandle& Create<#=method.Name#>();
 
 	UFUNCTION(BlueprintCallable, Category = TurboLink)
 	void Init<#=method.Name#>FromHandle(const FGrpcContextHandle& Handle);
 <#}#>
 
 	UFUNCTION(BlueprintCallable, Category = TurboLink, meta = (AdvancedDisplay = 2))
-	void <#=method.Name#>(FGrpcContextHandle Handle, const <#=method.InputType#>& Request, FGrpcMetaData MetaData = FGrpcMetaData(), float DeadLineSeconds = 0.f);
+	void <#=method.Name#>(const FGrpcContextHandle& Handle, const <#=method.InputType#>& Request, FGrpcMetaData MetaData = FGrpcMetaData(), float DeadLineSeconds = 0.f);
 
 <#
 if(method.ClientStreaming && !method.ServerStreaming) {
 #>
 	UFUNCTION(BlueprintCallable, Category = TurboLink)
-	void Stop<#=method.Name#>(FGrpcContextHandle Handle);
+	void Stop<#=method.Name#>(const FGrpcContextHandle& Handle);
 <#
 }
 #>
@@ -86,7 +95,7 @@ public:
 	virtual void Shutdown() override;
 
 	UFUNCTION(BlueprintCallable, Category = TurboLink)
-	void TryCancel(FGrpcContextHandle Handle);
+	void TryCancel(const FGrpcContextHandle& Handle);
 };
 
 <#

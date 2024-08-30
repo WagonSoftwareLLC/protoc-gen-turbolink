@@ -72,7 +72,7 @@ void UCall<#=service.Name#><#=method.Name#>::OnServiceStateChanged(EGrpcServiceS
 	}
 }
 
-void UCall<#=service.Name#><#=method.Name#>::OnContextStateChange(FGrpcContextHandle Handle, EGrpcContextState State)
+void UCall<#=service.Name#><#=method.Name#>::OnContextStateChange(const FGrpcContextHandle& Handle, EGrpcContextState State)
 {
 	if (State == EGrpcContextState::Done)
 	{
@@ -83,7 +83,11 @@ void UCall<#=service.Name#><#=method.Name#>::OnContextStateChange(FGrpcContextHa
 	}
 }
 
-void UCall<#=service.Name#><#=method.Name#>::OnResponse(FGrpcContextHandle Handle, const FGrpcResult& GrpcResult, const <#=method.OutputType#>& Response)
+<#if(method.ServerStreaming) {#>
+void UCall<#=service.Name#><#=method.Name#>::OnResponse(const FGrpcContextHandle& Handle, const FGrpcResult& GrpcResult, bool bIsEnded, const <#=method.OutputType#>& Response)
+<#} else {#>
+void UCall<#=service.Name#><#=method.Name#>::OnResponse(const FGrpcContextHandle& Handle, const FGrpcResult& GrpcResult, const <#=method.OutputType#>& Response)
+<#}#>
 {
 	if (GrpcResult.Code == EGrpcResultCode::Ok)
 	{

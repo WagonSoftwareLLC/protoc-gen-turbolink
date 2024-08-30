@@ -85,7 +85,7 @@ namespace protoc_gen_turbolink
                 case FieldDescriptorProto.Types.Type.Bytes:
                     ueType += "FBytes"; break;
                 case FieldDescriptorProto.Types.Type.Enum:
-                    ueType += GetMessageName(field.TypeName, "EGrpc"); break;
+                    ueType += GetMessageName(field.TypeName, "EGrpc") + "::Type"; break;
                 default:
                     ueType += "ERROR_TYPE"; break;
             }

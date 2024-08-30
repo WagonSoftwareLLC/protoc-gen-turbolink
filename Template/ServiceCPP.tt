@@ -51,6 +51,10 @@ void U<#=service.Name#>::Connect()
 	{
 		OnServiceStateChanged.Broadcast(UTurboLinkGrpcManager::Private::GrpcStateToServiceState(currentChannelState));
 	}
+	if (OnServiceStateChangedNative.IsBound())
+	{
+		OnServiceStateChangedNative.Broadcast(UTurboLinkGrpcManager::Private::GrpcStateToServiceState(currentChannelState));
+	}
 }
 
 EGrpcServiceState U<#=service.Name#>::GetServiceState() const

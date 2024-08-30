@@ -40,7 +40,7 @@ if(method.ClientStreaming && !method.ServerStreaming) {
 	virtual void OnRpcEvent(bool Ok, const void* EventTag) override;
 
 public:
-	GrpcContext_<#=service.Name#>_<#=method.Name#>(FGrpcContextHandle _Handle, UGrpcService* _Service, UGrpcClient* _Client);
+	GrpcContext_<#=service.Name#>_<#=method.Name#>(const FGrpcContextHandle& _Handle, UGrpcService* _Service, UGrpcClient* _Client);
 };
 
 <#

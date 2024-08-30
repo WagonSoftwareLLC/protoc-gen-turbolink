@@ -80,11 +80,14 @@ private:
 	void OnServiceStateChanged(EGrpcServiceState NewState);
 	
 	UFUNCTION()
-	void OnContextStateChange(FGrpcContextHandle Handle, EGrpcContextState State);
+	void OnContextStateChange(const FGrpcContextHandle& Handle, EGrpcContextState State);
 
 	UFUNCTION()
-	void OnResponse(FGrpcContextHandle Handle, const FGrpcResult& GrpcResult, const <#=method.OutputType#>& Response);
-
+<#if(method.ServerStreaming) {#>
+	void OnResponse(const FGrpcContextHandle& Handle, const FGrpcResult& GrpcResult, bool bIsEnded, const <#=method.OutputType#>& Response);
+<#} else {#>
+	void OnResponse(const FGrpcContextHandle& Handle, const FGrpcResult& GrpcResult, const <#=method.OutputType#>& Response);
+<#}#>
 	void Shutdown();
 };
 <#

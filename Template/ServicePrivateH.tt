@@ -49,13 +49,17 @@ public:
 	U<#=service.Name#>Client* InnerClient;
 
 	UFUNCTION()
-	void OnResponse(FGrpcContextHandle Handle, const FGrpcResult& GrpcResult, const <#=method.OutputType#>& Response);
+<#if(method.ServerStreaming) {#>
+	void OnResponse(const FGrpcContextHandle& Handle, const FGrpcResult& GrpcResult, bool bIsEnded, const <#=method.OutputType#>& Response);
+<#} else {#>
+	void OnResponse(const FGrpcContextHandle& Handle, const FGrpcResult& GrpcResult, const <#=method.OutputType#>& Response);
+<#}#>
 <#
 if(method.ServerStreaming) 
 {
 #>
 	UFUNCTION()
-	void OnContextStateChanged(FGrpcContextHandle Handle, EGrpcContextState NewState);
+	void OnContextStateChanged(const FGrpcContextHandle& Handle, EGrpcContextState NewState);
 <#
 }
 #>

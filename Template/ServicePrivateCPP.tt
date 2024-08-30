@@ -14,7 +14,11 @@ foreach(GrpcService service in s.ServiceArray)
 	{
 		if(!method.ClientStreaming) {
 #>
-void U<#=service.Name#><#=method.Name#>LambdaWrapper::OnResponse(FGrpcContextHandle _Handle, const FGrpcResult& GrpcResult, const <#=method.OutputType#>& Response)
+<#if(method.ServerStreaming) {#>
+void U<#=service.Name#><#=method.Name#>LambdaWrapper::OnResponse(const FGrpcContextHandle& _Handle, const FGrpcResult& GrpcResult, bool bIsEnded, const <#=method.OutputType#>& Response)
+<#} else {#>
+void U<#=service.Name#><#=method.Name#>LambdaWrapper::OnResponse(const FGrpcContextHandle& _Handle, const FGrpcResult& GrpcResult, const <#=method.OutputType#>& Response)
+<#}#>
 {
 	if (_Handle != this->Handle) return;
 
@@ -33,7 +37,7 @@ void U<#=service.Name#><#=method.Name#>LambdaWrapper::OnResponse(FGrpcContextHan
 			if(method.ServerStreaming) 
 			{
 #>
-void U<#=service.Name#><#=method.Name#>LambdaWrapper::OnContextStateChanged(FGrpcContextHandle _Handle, EGrpcContextState NewState)
+void U<#=service.Name#><#=method.Name#>LambdaWrapper::OnContextStateChanged(const FGrpcContextHandle& _Handle, EGrpcContextState NewState)
 {
 	if (_Handle != this->Handle) return;
 	if (NewState == EGrpcContextState::Done)

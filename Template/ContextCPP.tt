@@ -25,7 +25,7 @@ foreach(GrpcService service in s.ServiceArray)
 	{
 #>
 
-GrpcContext_<#=service.Name#>_<#=method.Name#>::GrpcContext_<#=service.Name#>_<#=method.Name#>(FGrpcContextHandle _Handle, UGrpcService* _Service, UGrpcClient* _Client)
+GrpcContext_<#=service.Name#>_<#=method.Name#>::GrpcContext_<#=service.Name#>_<#=method.Name#>(const FGrpcContextHandle& _Handle, UGrpcService* _Service, UGrpcClient* _Client)
 	: Super(_Handle, _Service, _Client)
 {
 }
@@ -114,25 +114,33 @@ void GrpcContext_<#=service.Name#>_<#=method.Name#>::Call(const <#=method.InputT
 <#}#>
 void GrpcContext_<#=service.Name#>_<#=method.Name#>::OnRpcEvent(bool Ok, const void* EventTag)
 {
-	Super::OnRpcEventInternal(Ok, EventTag, 
-		[this](const FGrpcResult& _Result, <#=method.GrpcOutputType#>* _RpcResponse) 
+	Super::OnRpcEventInternal(Ok, EventTag,
+		[this](const FGrpcResult& _Result, <#=method.GrpcOutputType#>* _RpcResponse)
 		{
 			U<#=service.Name#>Client* client = (U<#=service.Name#>Client*)(this->Client);
-			if (!(client->On<#=method.Name#>Response.IsBound())) return;
-
-			<#=method.OutputType#> response;
-			if (_RpcResponse) {
-				GRPC_TO_TURBOLINK(_RpcResponse, &response);
+			const bool bBound = client->On<#=method.Name#>Response.IsBound();
+			const bool bBoundNative = client->On<#=method.Name#>ResponseNative.IsBound();
+			if (bBound || bBoundNative) {
+				<#=method.OutputType#> response;
+				if (_RpcResponse) {
+					GRPC_TO_TURBOLINK(_RpcResponse, &response);
+				}
+	<#if(method.ServerStreaming) {#>
+				if (bBound) client->On<#=method.Name#>Response.Broadcast(Handle, _Result, _RpcResponse == nullptr, response);
+				if (bBoundNative) client->On<#=method.Name#>ResponseNative.Broadcast(Handle, _Result, _RpcResponse == nullptr, response);
+	<#} else {#>
+				if (bBound) client->On<#=method.Name#>Response.Broadcast(Handle, _Result, response);
+				if (bBoundNative) client->On<#=method.Name#>ResponseNative.Broadcast(Handle, _Result, response);
+	<#}#>
 			}
-			client->On<#=method.Name#>Response.Broadcast(Handle, _Result, response);
+			if (_Result.Code != EGrpcResultCode::Ok && client->GetService()) client->GetService()->OnServiceGrpcError.Broadcast(_Result);
 		}
 <#if(method.ClientStreaming) {#>
-		, [this]() 
+		, [this]()
 		{
 			U<#=service.Name#>Client* client = (U<#=service.Name#>Client*)(this->Client);
-			if (!(client->On<#=method.Name#>WriteComplete.IsBound())) return;
-
-			client->On<#=method.Name#>WriteComplete.Broadcast(Handle);
+			if ((client->On<#=method.Name#>WriteComplete.IsBound())) client->On<#=method.Name#>WriteComplete.Broadcast(Handle);
+			if ((client->On<#=method.Name#>WriteCompleteNative.IsBound())) client->On<#=method.Name#>WriteCompleteNative.Broadcast(Handle);
 		}
 <#}#>
 	);

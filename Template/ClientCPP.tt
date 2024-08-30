@@ -17,7 +17,7 @@ foreach(GrpcService service in s.ServiceArray)
 foreach (GrpcServiceMethod method in service.MethodArray)
 {
 #>
-FGrpcContextHandle U<#=service.Name#>Client::Init<#=method.Name#>()
+FGrpcContextHandle& U<#=service.Name#>Client::Init<#=method.Name#>()
 {
 	FGrpcContextHandle handle = Service->TurboLinkManager->GetNextContextHandle();
 	auto context = UGrpcClient::MakeContext<GrpcContext_<#=service.Name#>_<#=method.Name#>>(handle);
@@ -28,8 +28,8 @@ FGrpcContextHandle U<#=service.Name#>Client::Init<#=method.Name#>()
 	return context->GetHandle();
 }
 
-<#if (method.ClientStreaming){#>
-FGrpcContextHandle U<#=service.Name#>Client::Create<#=method.Name#>()
+<#if(method.ClientStreaming) {#>
+FGrpcContextHandle& U<#=service.Name#>Client::Create<#=method.Name#>()
 {
 	FGrpcContextHandle handle = Service->TurboLinkManager->GetNextContextHandle();
 	auto context = UGrpcClient::MakeContext<GrpcContext_<#=service.Name#>_<#=method.Name#>>(handle);
@@ -48,7 +48,7 @@ void U<#= service.Name #>Client::Init<#= method.Name #>FromHandle(const FGrpcCon
 }
 <#}#>
 
-void U<#=service.Name#>Client::<#=method.Name#>(FGrpcContextHandle Handle, const <#=method.InputType#>& Request, FGrpcMetaData MetaData, float DeadLineSeconds)
+void U<#=service.Name#>Client::<#=method.Name#>(const FGrpcContextHandle& Handle, const <#=method.InputType#>& Request, FGrpcMetaData MetaData, float DeadLineSeconds)
 {
 	auto context = UGrpcClient::GetContext(Handle);
 	if (context != nullptr)
@@ -64,7 +64,7 @@ void U<#=service.Name#>Client::<#=method.Name#>(FGrpcContextHandle Handle, const
 
 		if (DeadLineSeconds > 0.f)
 		{
-			std::chrono::time_point deadLine = std::chrono::system_clock::now() + 
+			std::chrono::time_point deadLine = std::chrono::system_clock::now() +
 				std::chrono::milliseconds((int32)(1000.f * DeadLineSeconds));
 			context<#=method.Name#>->RpcContext->set_deadline(deadLine);
 		}
@@ -73,7 +73,7 @@ void U<#=service.Name#>Client::<#=method.Name#>(FGrpcContextHandle Handle, const
 }
 
 <#if(method.ClientStreaming && !method.ServerStreaming) {#>
-void U<#=service.Name#>Client::Stop<#=method.Name#>(FGrpcContextHandle Handle)
+void U<#=service.Name#>Client::Stop<#=method.Name#>(const FGrpcContextHandle& Handle)
 {
 	auto context = UGrpcClient::GetContext(Handle);
 	if (context != nullptr)
@@ -87,7 +87,7 @@ void U<#=service.Name#>Client::Stop<#=method.Name#>(FGrpcContextHandle Handle)
 <#
 }
 #>
-void U<#=service.Name#>Client::TryCancel(FGrpcContextHandle Handle)
+void U<#=service.Name#>Client::TryCancel(const FGrpcContextHandle& Handle)
 {
 	auto context = UGrpcClient::GetContext(Handle);
 	if (context != nullptr)
