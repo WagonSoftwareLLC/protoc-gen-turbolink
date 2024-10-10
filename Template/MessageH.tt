@@ -25,6 +25,8 @@ foreach (GrpcEnum enumDefine in s.EnumArray)
 {
 #>
 
+<#if(enumDefine.Fields.Count == 0) continue;#>
+
 <#
 int MaxCount = 0;
 foreach (GrpcEnumField enumField in enumDefine.Fields) if (MaxCount < enumField.Number) MaxCount = enumField.Number;
@@ -50,8 +52,12 @@ foreach (GrpcEnumField enumField in enumDefine.Fields)
 <#
 foreach(GrpcMessage message in s.MessageArray)
 {
-if(message.HasNativeMake || message is GrpcMessage_Oneof)
-{
+    if (message.OptionalMessage) continue;
+    if (!message.Blueprintable) {
+#>
+USTRUCT()
+<#
+    } else if(message.HasNativeMake || message is GrpcMessage_Oneof) {
 #>
 
 USTRUCT(BlueprintType, meta = (DisplayName="<#=message.DisplayName#>"/*,
@@ -69,29 +75,38 @@ struct <#=message.Name#> : public FGrpcMessage
 if(g.GenerateJsonCode && !(message is GrpcMessage_Oneof)) {
 #>
     DECLARE_JSON_FUNCTIONS()
-<#}#>
-<#
+<#}
+
 if(message is GrpcMessage_Oneof) {
 GrpcMessage_Oneof oneofMessage = (GrpcMessage_Oneof)message;
 #>
 
+<#if (message.Blueprintable) {#>
     /*UPROPERTY(BlueprintReadWrite, Category = TurboLink)*/ // TODO: Blueprint doesn't support uint8, so we need smthng
     <#=oneofMessage.OneofEnum.Name#>::Type <#=oneofMessage.CamelName#>Case{};
+<# } else {#>
+    <#=oneofMessage.OneofEnum.Name#>::Type <#=oneofMessage.CamelName#>Case{};
+<# }#>
 <#}#>
 <#
 foreach(GrpcMessageField field in message.Fields)
 {
-if(field.NeedNativeMake)
+
+if (message is GrpcMessage_Oneof && !message.Blueprintable) {#>
+    TSharedPtr<<#=field.FieldType#>> <#=field.FieldName#>;
+<#} else if(field.NeedNativeMake || field.Optional)
 {
 #>
 
     <#=field.TypeAsNativeField#> <#=field.FieldName#>;
 <#}else{#>
 
-<#if (field.FieldDesc != null && field.FieldDesc.Type == FieldDescriptorProto.Types.Type.Enum) {#>
+<#if (message.Blueprintable) {#>
+    <#if (field.FieldDesc != null && field.FieldDesc.Type == FieldDescriptorProto.Types.Type.Enum) {#>
     /*UPROPERTY(BlueprintReadWrite, Category = TurboLink)*/ // TODO: Blueprint doesn't support uint8, so we need smthng
-<#} else {#>
+    <#} else {#>
     UPROPERTY(BlueprintReadWrite, Category = TurboLink)
+    <#}#>
 <#}#>
     <#=field.FieldType#> <#=field.FieldName#><#=field.FieldDefaultValue#>;
 <#}}#>
@@ -100,8 +115,10 @@ if(field.NeedNativeMake)
 <#
 foreach(GrpcMessage message in s.MessageArray)
 {
-if(message.HasNativeMake || message is GrpcMessage_Oneof)
-{
+    if (message.OptionalMessage) continue;
+    if (!message.Blueprintable) continue;
+    if(message.HasNativeMake || message is GrpcMessage_Oneof)
+    {
 #>
 
 UCLASS()

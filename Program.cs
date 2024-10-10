@@ -1,15 +1,80 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Text.Json;
 using Google.Protobuf;
 using Google.Protobuf.Compiler;
 using Google.Protobuf.Reflection;
+using System.Collections;
+using System.Reflection;
 
 namespace protoc_gen_turbolink
 {
+    static class OneofExtenstions
+    {
+        public static int BlueprintableFieldNumber = 1000;
+        public static readonly Extension<OneofOptions, bool> Blueprintable =
+            new Extension<OneofOptions, bool>(BlueprintableFieldNumber, FieldCodec.ForBool((uint)BlueprintableFieldNumber));
+
+        public static bool? GetBlueprintable(Object Options, int FieldNumber)
+        {
+            if (Options == null) return null;
+            var unknownFieldsField = Options.GetType().GetField("_unknownFields", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (unknownFieldsField == null) return null;
+            var unknownFields = unknownFieldsField.GetValue(Options) as UnknownFieldSet;
+            if (unknownFields == null) return null;
+            var unknownFieldsDictionaryField= unknownFields.GetType().GetField("fields", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (unknownFieldsDictionaryField == null) return null;
+            object unknownFieldsDictionaryObj = unknownFieldsDictionaryField.GetValue(unknownFields);
+
+            var dictionaryType = unknownFieldsDictionaryObj.GetType();
+
+            if (!typeof(IDictionary).IsAssignableFrom(dictionaryType)) return null;
+
+            foreach (DictionaryEntry field in (IDictionary)unknownFieldsDictionaryObj)
+            {
+                if ((int)field.Key != FieldNumber)  continue;
+
+                var varintListField = field.Value.GetType().GetField("varintList", BindingFlags.NonPublic | BindingFlags.Instance);
+                if (varintListField == null) continue;
+                var isBlueprintableList = varintListField.GetValue(field.Value) as List<ulong>;
+                if (isBlueprintableList == null) continue;
+
+                foreach (var isBlueprintable in isBlueprintableList)
+                {
+                    if (isBlueprintable > 0) return true;
+                }
+                return false;
+            }
+
+            return null;
+        }
+        public static bool? GetBlueprintable(OneofDescriptorProto Desc)
+        {
+            return GetBlueprintable(Desc.Options, BlueprintableFieldNumber);
+        }
+    }
+    static class MessageExtensions
+    {
+        static int BlueprintableFieldNumber = 1000;
+        public static readonly Extension<MessageOptions, bool> Blueprintable =
+            new Extension<MessageOptions, bool>(BlueprintableFieldNumber, FieldCodec.ForBool((uint)BlueprintableFieldNumber));
+        public static bool? GetBlueprintable(DescriptorProto Desc)
+        {
+            return OneofExtenstions.GetBlueprintable(Desc.Options, BlueprintableFieldNumber);
+        }
+    }
+    static class FieldExtenstions
+    {
+        static int BlueprintableFieldNumber = 1000;
+        public static readonly Extension<FieldOptions, bool> Blueprintable =
+            new Extension<FieldOptions, bool>(BlueprintableFieldNumber, FieldCodec.ForBool((uint)BlueprintableFieldNumber));
+        public static bool? GetBlueprintable(FieldDescriptorProto Desc)
+        {
+            return OneofExtenstions.GetBlueprintable(Desc.Options, BlueprintableFieldNumber);
+        }
+    }
+
     class Program
     {
         static bool GetParam(Dictionary<string, string> paramDictionary, string paramName, bool defaultValue)

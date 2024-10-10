@@ -21,8 +21,10 @@ DEFINE_JSON_FUNCTIONS(<#=message.Name#>, ::<#=message.GrpcName#>)
 <# 
 foreach(GrpcMessage message in s.MessageArray)
 {
-if(message.HasNativeMake || message is GrpcMessage_Oneof)
-{
+    if (message.OptionalMessage) continue;
+    if (!message.Blueprintable) continue;
+    if(message.HasNativeMake || message is GrpcMessage_Oneof)
+    {
 #>
 <#=message.Name#> U<#=message.Name.Substring(1)#>HelperLibrary::Make<#=message.CamelName#>(<#if(message is GrpcMessage_Oneof){ GrpcMessage_Oneof oneofMessage = (GrpcMessage_Oneof)message; #><#=oneofMessage.OneofEnum.Name#>::Type <#=oneofMessage.CamelName#>Case, 
 <#}else{#> 
@@ -45,7 +47,7 @@ if(message is GrpcMessage_Oneof) {
 <#for(int index=0; index<message.Fields.Count; index++){
 GrpcMessageField field = message.Fields[index];
 #>
-<#if(field.NeedNativeMake) {#>
+<#if(field.NeedNativeMake || field.Optional) {#>
 <#
 if(field is GrpcMessageField_Map){
 GrpcMessageField_Map mapField = (GrpcMessageField_Map)field;
@@ -92,7 +94,7 @@ if(message is GrpcMessage_Oneof) {
 <#for(int index=0; index<message.Fields.Count; index++){
 GrpcMessageField field = message.Fields[index];
 #>
-<#if(field.NeedNativeMake) {#>
+<#if(field.NeedNativeMake || field.Optional) {#>
 <#
 if(field is GrpcMessageField_Map){
 GrpcMessageField_Map mapField = (GrpcMessageField_Map)field;
