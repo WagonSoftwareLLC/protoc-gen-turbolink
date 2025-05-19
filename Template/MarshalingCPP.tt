@@ -122,6 +122,9 @@ foreach(GrpcMessageField fieldOfOneofMessage in oneofMessage.Fields)
 <#+
 }
 #>
+    default:
+        out-><#=field.FieldName#>.<#=field.FieldName#>Case = <#=oneofMessage.OneofEnum.Name#>::Unset;
+        break;
     }
 <#+} else {#>
 <#+if(field.Optional) { #>

@@ -37,14 +37,15 @@ namespace <#=enumDefine.Name#>
 {
 	enum Type : int
 	{
+        Unset = 0,
 <#if(enumDefine.MissingZeroField) {#>
-        _ZERO_RESERVED_FIELD_=0 UMETA(Hidden),
+        _ZERO_RESERVED_FIELD_=1 UMETA(Hidden),
 <#}#>
 <#
 foreach (GrpcEnumField enumField in enumDefine.Fields)
 {
 #>
-        <#=enumField.Name#>=<#=enumField.Number#>,
+        <#=enumField.Name#>=<#=enumField.Number + 1#>,
 <#}#>
     };
 }

@@ -11,7 +11,7 @@ using Google.Protobuf.Collections;
 
 namespace protoc_gen_turbolink
 {
-	public class GrpcEnumField
+    public class GrpcEnumField
 	{
 		public string Name { get; set; }				//eg. "Male", "Female"
 		public int Number { get; set; }					//eg. "0", "1"
@@ -31,7 +31,8 @@ namespace protoc_gen_turbolink
 		{
 			FieldDesc = fieldDesc;
 			NeedNativeMake = false;
-			if (fieldDesc != null)
+            Optional = false;
+            if (fieldDesc != null)
 			{
 				FieldGrpcName = fieldDesc.Name.ToLower();
 				if(TurboLinkUtils.CppKeyWords.Contains(FieldGrpcName))
@@ -60,8 +61,13 @@ namespace protoc_gen_turbolink
 			get;
 		}
 		public string FieldDefaultValue { get; set; }   //eg. "=0", '=""', "= static_cast<EGrpcCommonGender>(0)", ""
-		public bool NeedNativeMake { get; set; }
-	}
+        public bool NeedNativeMake { get; set; }
+        public bool Optional { get; set; }
+        public virtual bool Blueprintable
+        {
+            get => (FieldDesc != null ? FieldExtenstions.GetBlueprintable(FieldDesc) : null) ?? true; 
+        }
+    }
 	public class GrpcMessageField_Single : GrpcMessageField
 	{
 		public GrpcMessageField_Single(FieldDescriptorProto fieldDesc) : base(fieldDesc)
@@ -74,7 +80,7 @@ namespace protoc_gen_turbolink
 		}
 		public override string TypeAsNativeField
 		{
-			get => NeedNativeMake ? ("TSharedPtr<" + TurboLinkUtils.GetFieldType(FieldDesc) + ">") : FieldType;
+			get => (NeedNativeMake || Optional) ? ("TSharedPtr<" + TurboLinkUtils.GetFieldType(FieldDesc) + ">") : FieldType;
 		}
 	}
 	public class GrpcMessageField_Repeated : GrpcMessageField
@@ -174,6 +180,8 @@ namespace protoc_gen_turbolink
 		public string[] ParentMessageNameList;
 		public List<GrpcMessageField> Fields { get; set; }
 		public bool HasNativeMake { get; set; }
+		public virtual bool Blueprintable { get => true; }
+		public virtual bool OptionalMessage { get => false; }
 	}
 	public class GrpcMessage_Oneof : GrpcMessage
 	{
@@ -202,7 +210,14 @@ namespace protoc_gen_turbolink
 		{
 			get => ParentMessage.DisplayName + "." + CamelName;
 		}
-	}
+        public override bool OptionalMessage {
+			get => OneofEnum.Fields.Count == 0;
+		}
+		public override bool Blueprintable
+		{
+			get => OneofExtenstions.GetBlueprintable(OneofDesc) ?? base.Blueprintable;
+		}
+    }
 	public class GrpcServiceMethod
 	{
 		public readonly MethodDescriptorProto MethodDesc;
@@ -526,20 +541,28 @@ namespace protoc_gen_turbolink
 				{
 					//add enum field
 					GrpcEnum oneofEnum = serviceFile.EnumArray[oneofMessageMap[field.OneofIndex].Item1];
-					GrpcEnumField oneofEnumField = new GrpcEnumField();
-					oneofEnumField.Name = messageField.FieldName;
-					oneofEnumField.Number = oneofEnum.Fields.Count;
-					oneofEnum.Fields.Add(oneofEnumField);
 
-					//add field to one of message
-					GrpcMessage_Oneof oneofMessage = (GrpcMessage_Oneof)serviceFile.MessageArray[oneofMessageMap[field.OneofIndex].Item2];
-					if (oneofMessage.Fields.Count == 0)
+					if (field.Proto3Optional)
 					{
-						//first field of oneof zone, add oneof field to parent message
-						GrpcMessageField_Oneof oneofField = new GrpcMessageField_Oneof(oneofMessage);
-						message.Fields.Add(oneofField);
+                        message.Fields.Add(messageField);
 					}
-					oneofMessage.Fields.Add(messageField);
+					else
+                    {
+                        GrpcEnumField oneofEnumField = new GrpcEnumField();
+                        oneofEnumField.Name = messageField.FieldName;
+                        oneofEnumField.Number = oneofEnum.Fields.Count;
+                        oneofEnum.Fields.Add(oneofEnumField);
+
+                        //add field to one of message
+                        GrpcMessage_Oneof oneofMessage = (GrpcMessage_Oneof)serviceFile.MessageArray[oneofMessageMap[field.OneofIndex].Item2];
+                        if (oneofMessage.Fields.Count == 0)
+                        {
+                            //first field of oneof zone, add oneof field to parent message
+                            GrpcMessageField_Oneof oneofField = new GrpcMessageField_Oneof(oneofMessage);
+                            message.Fields.Add(oneofField);
+                        }
+                        oneofMessage.Fields.Add(messageField);
+                    }
 				}
 				else
 				{
@@ -578,20 +601,23 @@ namespace protoc_gen_turbolink
 
 			//find message index that each field directly depends on
 			foreach(GrpcMessage message in serviceFile.MessageArray)
-			{
-				foreach(GrpcMessageField messageField in message.Fields)
+            {
+                foreach (GrpcMessageField messageField in message.Fields)
 				{
-					if (messageField.FieldDesc==null || //Oneof message field
-						messageField.FieldDesc.Type != FieldDescriptorProto.Types.Type.Message) continue;
-					string typeName = messageField.FieldDesc.TypeName;
+                    //Oneof message field
+                    if (messageField.FieldDesc==null) continue;
+                    if (messageField.FieldDesc.Proto3Optional) messageField.Optional = true; // String as optional
+                    if (messageField.FieldDesc.Type != FieldDescriptorProto.Types.Type.Message) continue;
+                    string typeName = messageField.FieldDesc.TypeName;
 
 					if (messageField is GrpcMessageField_Map)
 					{
 						//for map field, pick value field name, eg. "map<string, Address>" => "Address"
 						GrpcMessageField_Map mapMessageField = (GrpcMessageField_Map)messageField;
 						typeName = mapMessageField.ValueField.FieldDesc.TypeName;
-					}
-					if (serviceFile.Message2IndexMap.ContainsKey(typeName))
+                    }
+
+                    if (serviceFile.Message2IndexMap.ContainsKey(typeName))
 					{
 						if(serviceFile.Message2IndexMap[typeName] >= message.Index)
 						{
